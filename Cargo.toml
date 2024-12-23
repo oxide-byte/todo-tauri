@@ -1,0 +1,9 @@
+[package]
+name = "todo-tauri"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+leptos = { version = "0.7.1", features = ["csr"] }
+uuid = { version = "1.11.0", features = ["v4", "js"] }
+instant = { version = "0.1.13", features = [ "wasm-bindgen", "inaccurate" ] }

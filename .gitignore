@@ -1,1 +1,7 @@
+# IDE
+*.iml
+/.idea
+
+# Build
 /target
+/dist
