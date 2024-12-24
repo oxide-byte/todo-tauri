@@ -1,3 +1,10 @@
 [build]
 target = "index.html"
 dist = "dist"
+
+[watch]
+ignore = ["./src-tauri"]
+
+[serve]
+port = 1420
+open = false

@@ -422,3 +422,76 @@ trunk serve
 We have a Todo application running
 
 ## Tauri
+
+a bit dirty, we execute
+
+```shell
+cargo create-tauri-app
+```
+
+as we have already a project, we move the files tauri-app down in our todo-tauri:
+
+* src-tauri
+* public
+* .taurignore
+
+we add to Cargo.toml
+```toml
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+serde = { version = "1", features = ["derive"] }
+serde-wasm-bindgen = "0.6"
+console_error_panic_hook = "0.1.7"
+
+[workspace]
+members = ["src-tauri"]
+```
+
+we add to trunk.toml
+```toml
+[watch]
+ignore = ["./src-tauri"]
+
+[serve]
+port = 1420
+open = false
+```
+The change of port is necessary for Tauri.
+
+and finally to main.rs
+
+```rust
+use serde::{Deserialize, Serialize};
+use wasm_bindgen::prelude::*;
+
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
+    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+}
+```
+
+and delete now the tauri-app folder
+
+Start the application with:
+
+```shell
+cargo tauri dev
+```
+
+or build the final release:
+
+```shell
+#!/bin/bash
+
+# Build the Tauri app
+cd src-tauri
+cargo tauri build
+cd ..
+
+# Build the workspace
+cargo build --release
+```
+
+and run for your machine the correspondent file: target/release/bundle
