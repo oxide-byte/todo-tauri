@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "tauri-app",
+  "productName": "todo-tauri",
   "version": "0.1.0",
-  "identifier": "com.tauri-app.app",
+  "identifier": "org.todo.tauri",
   "build": {
     "beforeDevCommand": "trunk serve",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "withGlobalTauri": true,
     "windows": [
       {
-        "title": "tauri-app",
+        "title": "todo-tauri",
         "width": 800,
         "height": 600
       }

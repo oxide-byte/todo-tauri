@@ -1,40 +1,68 @@
+use chrono::{DateTime, Utc};
 use crate::components::*;
 use crate::entities::*;
 use leptos::prelude::*;
+use leptos::task::spawn_local;
+use crate::{invoke, invoke_without_args};
+use gloo_utils::format::JsValueSerdeExt;
+use crate::components::app::Mode::{ADD, EDIT};
+
+#[derive(Debug, PartialEq)]
+enum Mode {
+    ADD,
+    EDIT
+}
+
+async fn load_data(_trigger: DateTime<Utc>, signal: WriteSignal<Vec<Todo>>) -> Vec<Todo> {
+    let rtn = invoke_without_args("get_todo_list").await;
+    let todos = rtn.into_serde::<Vec<Todo>>().unwrap();
+    signal.set(todos.clone());
+    todos
+}
 
 #[component]
 pub fn App() -> impl IntoView {
     let show_modal: RwSignal<bool> = RwSignal::new(false);
+    let show_modal_mode: RwSignal<Mode> = RwSignal::new(ADD);
     let edit_todo_item: RwSignal<Todo> = RwSignal::new(Todo::new_empty());
 
     let button_new_class = "rounded-full pl-5 pr-5 bg-blue-700 text-white rounded hover:bg-blue-800";
-
     let todos: RwSignal<Vec<Todo>> = RwSignal::new(Vec::new());
+
+    let refresh :RwSignal<DateTime<Utc>> = RwSignal::new(Utc::now());
+    let _fetch_todos = LocalResource::new(move || load_data(refresh.get(), todos.write_only()));
 
     let add_new_todo = move |x: Todo| {
         edit_todo_item.set(x);
+        show_modal_mode.set(ADD);
         show_modal.set(true);
     };
 
     let edit_todo = move |todo: Todo| {
         edit_todo_item.set(todo);
+        show_modal_mode.set(EDIT);
         show_modal.set(true);
     };
 
     let delete_todo = move |todo: Todo| {
-        todos.update(|old| {
-            old.retain(|x| x.id != todo.id);
+        spawn_local(async move {
+            let data = todo.js_value();
+            invoke("delete_todo", data).await;
+            refresh.set(Utc::now());
         });
     };
 
     let close_modal_todo = move |x: Option<Todo>| {
-        if let Some(todo) = x {
-            todos.update(|old| {
-                old.retain(|x| x.id != todo.id);
-                old.push(todo);
-                old.sort_by(|a, b| a.created.cmp(&b.created));
-            });
-        }
+        spawn_local(async move {
+            if show_modal_mode.read() == ADD {
+                let data = x.unwrap().js_value();
+                invoke("add_todo", data).await;
+            } else {
+                let data = x.unwrap().js_value();
+                invoke("edit_todo", data).await;
+            }
+            refresh.set(Utc::now());
+        });
         show_modal.set(false);
     };
 
@@ -44,7 +72,10 @@ pub fn App() -> impl IntoView {
 
                 <h1 class="text-4xl font-bold mb-4">Todo List</h1>
 
-                <button on:click={move |_| add_new_todo(Todo::new_empty())} class=button_new_class>
+                <button on:click={move |ev| {
+                        ev.prevent_default();
+                        add_new_todo(Todo::new_empty())
+                        }} class=button_new_class>
                     <i class="fa-solid fa-plus"></i>
                 </button>
 

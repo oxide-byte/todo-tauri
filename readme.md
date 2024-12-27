@@ -1,7 +1,13 @@
 # Todo - Leptos - Tauri
 
+## Introduction
+
+This is a simple POC of a [Leptos (0.7)](https://leptos.dev/) Todo Web Application embedded in the [Tauri 2](https://v2.tauri.app/) Framework for Desktop and/or Mobile Applications.
+
 ## Preparation
-cargo install trunk
+
+* cargo install trunk
+* rustup target add wasm32-unknown-unknown
 
 ## Creation
 
@@ -419,23 +425,19 @@ start the service
 trunk serve
 ```
 
-We have a Todo application running
+We have a Todo web application running.
 
 ## Tauri
 
-a bit dirty, we execute
+We could apply the command [cargo create-tauri-app] on a new application or [cargo tauri init] on an existing. 
 
 ```shell
-cargo create-tauri-app
+cargo tauri init
 ```
 
-as we have already a project, we move the files tauri-app down in our todo-tauri:
+that creates a new module in our project under the folder: src-tauri.
 
-* src-tauri
-* public
-* .taurignore
-
-we add to Cargo.toml
+In the main module we add to Cargo.toml
 ```toml
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
@@ -448,7 +450,7 @@ console_error_panic_hook = "0.1.7"
 members = ["src-tauri"]
 ```
 
-we add to trunk.toml
+and we add to trunk.toml
 ```toml
 [watch]
 ignore = ["./src-tauri"]
@@ -459,19 +461,6 @@ open = false
 ```
 The change of port is necessary for Tauri.
 
-and finally to main.rs
-
-```rust
-use serde::{Deserialize, Serialize};
-use wasm_bindgen::prelude::*;
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
-    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
-}
-```
-
 and delete now the tauri-app folder
 
 Start the application with:
@@ -480,18 +469,258 @@ Start the application with:
 cargo tauri dev
 ```
 
-or build the final release:
+We have the first run of the application on the Desktop. 
+
+## Separate Backend / Frontend
+
+The Frontend has limited capabilities, for this we transfer some parts of our application to the Backend, for example to include a communication to a Database. 
+
+We add some dependencies to the main cargo.toml
+
+```toml
+[dependencies]
+leptos = { version = "0.7.1", features = ["csr"] }
+uuid = { version = "1.11.0", features = ["v4", "js"] }
+chrono = { version = "0.4.39", features = ["serde", "wasm-bindgen"] }
+wasm-bindgen = { version = "0.2.99", features = ["serde"] }
+wasm-bindgen-futures = "0.4.49"
+web-sys = "0.3.76"
+js-sys = "0.3.76"
+serde = { version = "1.0.216", features = ["derive"] }
+serde-wasm-bindgen = { version = "0.6.5"}
+gloo-utils = { version = "0.2.0", features = ["serde"] }
+```
+
+and to the cargo.toml in src-tauri:
+```toml
+[dependencies]
+tauri = { version = "2.1.1", features = [] }
+tauri-plugin-opener = "2.2.2"
+serde = { version = "1.0.216", features = ["derive"] }
+serde_json = { version = "1.0.133" }
+chrono = { version = "0.4.39", features = ["serde"] }
+```
+
+As you can I switch for the timestamps to the chrono library as it had less problems for the serialization.
+
+In the main.rs file from the Frontend we add:
+
+```rust
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke)]
+    async fn invoke_without_args(cmd: &str) -> JsValue;
+
+    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
+    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+}
+```
+
+Two binding methods, to communicate from the Frontend to the Backend.
+
+The Todo Entity get modified:
+
+```rust
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Todo {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub created: DateTime<Utc>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct TodoJsValue {
+    pub todo: Todo
+}
+
+impl Todo {
+    pub fn new(title: String, description: String) -> Self {
+        let id = Uuid::new_v4().to_string();
+        let created = Utc::now();
+        Todo { id, title, description, created }
+    }
+
+    pub fn new_empty() -> Todo {
+        Self::new("".to_string(), "".to_string())
+    }
+    pub fn js_value(&self) -> JsValue {
+        let container = TodoJsValue { todo: self.clone() };
+        JsValue::from_serde(&container).unwrap()
+    }
+}
+```
+
+The TodoJsValue is a container/wrapper to sent the Todo Data to the Backend by JsValue.
+
+We can now modify the app.rs:
+
+```rust
+#[derive(Debug, PartialEq)]
+enum Mode {
+    ADD,
+    EDIT
+}
+
+async fn load_data(_trigger: DateTime<Utc>, signal: WriteSignal<Vec<Todo>>) -> Vec<Todo> {
+    let rtn = invoke_without_args("get_todo_list").await;
+    let todos = rtn.into_serde::<Vec<Todo>>().unwrap();
+    signal.set(todos.clone());
+    todos
+}
+
+#[component]
+pub fn App() -> impl IntoView {
+    let show_modal: RwSignal<bool> = RwSignal::new(false);
+    let show_modal_mode: RwSignal<Mode> = RwSignal::new(ADD);
+    let edit_todo_item: RwSignal<Todo> = RwSignal::new(Todo::new_empty());
+
+    let button_new_class = "rounded-full pl-5 pr-5 bg-blue-700 text-white rounded hover:bg-blue-800";
+    let todos: RwSignal<Vec<Todo>> = RwSignal::new(Vec::new());
+
+    let refresh :RwSignal<DateTime<Utc>> = RwSignal::new(Utc::now());
+    let _fetch_todos = LocalResource::new(move || load_data(refresh.get(), todos.write_only()));
+
+    let add_new_todo = move |x: Todo| {
+        edit_todo_item.set(x);
+        show_modal_mode.set(ADD);
+        show_modal.set(true);
+    };
+
+    let edit_todo = move |todo: Todo| {
+        edit_todo_item.set(todo);
+        show_modal_mode.set(EDIT);
+        show_modal.set(true);
+    };
+
+    let delete_todo = move |todo: Todo| {
+        spawn_local(async move {
+            let data = todo.js_value();
+            invoke("delete_todo", data).await;
+            refresh.set(Utc::now());
+        });
+    };
+
+    let close_modal_todo = move |x: Option<Todo>| {
+        spawn_local(async move {
+            if show_modal_mode.read() == ADD {
+                let data = x.unwrap().js_value();
+                invoke("add_todo", data).await;
+            } else {
+                let data = x.unwrap().js_value();
+                invoke("edit_todo", data).await;
+            }
+            refresh.set(Utc::now());
+        });
+        show_modal.set(false);
+    };
+
+    view! {
+        <div class="max-w-md mx-auto mt-10 mt-3 p-5 bg-white rounded-lg shadow-lg">
+            <div class="flex justify-between">
+
+                <h1 class="text-4xl font-bold mb-4">Todo List</h1>
+
+                <button on:click={move |ev| {
+                        ev.prevent_default();
+                        add_new_todo(Todo::new_empty())
+                        }} class=button_new_class>
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+
+            </div>
+            <For
+                each=move || todos.get()
+                key=|state| (state.id.clone(), state.title.clone(), state.description.clone())
+                let:child>
+                <TodoItem todo=child delete=delete_todo edit=edit_todo/>
+            </For>
+
+            <Show when = move || todos.get().is_empty()>
+                <div class="flex justify-between">
+                    <h2 class="text-2xl font-bold mb-4">Currently no Todos</h2>
+                </div>
+            </Show>
+        </div>
+
+        <Show when = move || show_modal.get()>
+            <TodoModal todo=edit_todo_item on_close_modal=close_modal_todo/>
+        </Show>
+
+    }
+}
+```
+
+The call to the Backend are asynchronous, for this we use spawn_local and call the WASM invoke methods.
+
+Finally in the src-tauri backend part we include the business logic in the lib.rs
+
+```rust
+#[tauri::command]
+fn get_todo_list(storage: State<Storage>) -> Vec<Todo> {
+    println!("Backend:get_todo_list");
+    let s = storage.store.lock().unwrap();
+    s.to_vec()
+}
+
+#[tauri::command]
+fn add_todo(todo: Todo, storage: State<Storage>) {
+    println!("Backend:add_todo: {:?}", todo);
+    let mut s = storage.store.lock().unwrap();
+    s.push(todo);
+}
+
+#[tauri::command]
+fn edit_todo(todo: Todo, storage: State<Storage>) {
+    println!("Backend:edit_todo");
+    let mut s = storage.store.lock().unwrap();
+    s.retain(|x| x.id != todo.id);
+    s.push(todo);
+}
+
+#[tauri::command]
+fn delete_todo(todo: Todo, storage: State<Storage>) {
+    println!("Backend:delete_todo");
+    let mut s = storage.store.lock().unwrap();
+    s.retain(|x| x.id != todo.id);
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Todo {
+    pub id: String,
+    pub title: String,
+    pub description: String,
+    pub created: DateTime<Utc>
+}
+
+#[derive(Debug)]
+struct Storage {
+    store: Mutex<Vec<Todo>>,
+}
+// To evaluate in the future
+// #[cfg_attr(mobile, tauri::mobile_entry_point)]
+pub fn run() {
+    tauri::Builder::default()
+        .plugin(tauri_plugin_opener::init())
+        .manage(Storage { store: Default::default() })
+        .invoke_handler(tauri::generate_handler![
+            get_todo_list,
+            add_todo,
+            edit_todo,
+            delete_todo,
+        ])
+        .run(tauri::generate_context!())
+        .expect("error while running tauri application");
+}
+```
+and declare the different commands.
+
+## Final Build
+
+We can now do the final build:
 
 ```shell
-#!/bin/bash
-
-# Build the Tauri app
-cd src-tauri
 cargo tauri build
-cd ..
-
-# Build the workspace
-cargo build --release
 ```
 
 and run for your machine the correspondent file: target/release/bundle
