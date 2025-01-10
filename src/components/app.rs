@@ -13,10 +13,9 @@ enum Mode {
     EDIT
 }
 
-async fn load_data(_trigger: DateTime<Utc>, signal: WriteSignal<Vec<Todo>>) -> Vec<Todo> {
+async fn load_data(_trigger: DateTime<Utc>) -> Vec<Todo> {
     let rtn = invoke_without_args("get_todo_list").await;
     let todos = rtn.into_serde::<Vec<Todo>>().unwrap();
-    signal.set(todos.clone());
     todos
 }
 
@@ -27,10 +26,9 @@ pub fn App() -> impl IntoView {
     let edit_todo_item: RwSignal<Todo> = RwSignal::new(Todo::new_empty());
 
     let button_new_class = "rounded-full pl-5 pr-5 bg-blue-700 text-white rounded hover:bg-blue-800";
-    let todos: RwSignal<Vec<Todo>> = RwSignal::new(Vec::new());
 
     let refresh :RwSignal<DateTime<Utc>> = RwSignal::new(Utc::now());
-    let _fetch_todos = LocalResource::new(move || load_data(refresh.get(), todos.write_only()));
+    let fetch_todos = LocalResource::new(move || load_data(refresh.get()));
 
     let add_new_todo = move |x: Todo| {
         edit_todo_item.set(x);
@@ -80,18 +78,29 @@ pub fn App() -> impl IntoView {
                 </button>
 
             </div>
+
+            <Suspense fallback=move || view! { <p>"Loading..."</p> }>
+
+            {move || Suspend::new(async move {
+            let todos = fetch_todos.await;
+            let todos_is_empty = todos.is_empty();
+
+            view!{
             <For
-                each=move || todos.get()
+                each=move || todos.clone()
                 key=|state| (state.id.clone(), state.title.clone(), state.description.clone())
                 let:child>
                 <TodoItem todo=child delete=delete_todo edit=edit_todo/>
             </For>
 
-            <Show when = move || todos.get().is_empty()>
+            <Show when = move || todos_is_empty>
                 <div class="flex justify-between">
                     <h2 class="text-2xl font-bold mb-4">Currently no Todos</h2>
                 </div>
             </Show>
+
+            }})}
+            </Suspense>
         </div>
 
         <Show when = move || show_modal.get()>

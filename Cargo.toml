@@ -2,9 +2,10 @@
 name = "todo-tauri"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
 
 [dependencies]
-leptos = { version = "0.7.1", features = ["csr"] }
+leptos = { version = "0.7.3", features = ["csr"] }
 uuid = { version = "1.11.0", features = ["v4", "js"] }
 chrono = { version = "0.4.39", features = ["serde", "wasm-bindgen"] }
 wasm-bindgen = { version = "0.2.99", features = ["serde"] }
