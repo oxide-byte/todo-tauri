@@ -2,10 +2,8 @@ use chrono::{DateTime, Utc};
 use crate::components::*;
 use crate::entities::*;
 use leptos::prelude::*;
-use leptos::task::spawn_local;
 use crate::{invoke, invoke_without_args};
 use gloo_utils::format::JsValueSerdeExt;
-use crate::components::app::Mode::{ADD, EDIT};
 
 #[derive(Debug, PartialEq)]
 enum Mode {
@@ -22,7 +20,7 @@ async fn load_data(_trigger: DateTime<Utc>) -> Vec<Todo> {
 #[component]
 pub fn App() -> impl IntoView {
     let show_modal: RwSignal<bool> = RwSignal::new(false);
-    let show_modal_mode: RwSignal<Mode> = RwSignal::new(ADD);
+    let show_modal_mode: RwSignal<Mode> = RwSignal::new(Mode::ADD);
     let edit_todo_item: RwSignal<Todo> = RwSignal::new(Todo::new_empty());
 
     let button_new_class = "rounded-full pl-5 pr-5 bg-blue-700 text-white rounded hover:bg-blue-800";
@@ -32,18 +30,18 @@ pub fn App() -> impl IntoView {
 
     let add_new_todo = move |x: Todo| {
         edit_todo_item.set(x);
-        show_modal_mode.set(ADD);
+        show_modal_mode.set(Mode::ADD);
         show_modal.set(true);
     };
 
     let edit_todo = move |todo: Todo| {
         edit_todo_item.set(todo);
-        show_modal_mode.set(EDIT);
+        show_modal_mode.set(Mode::EDIT);
         show_modal.set(true);
     };
 
     let delete_todo = move |todo: Todo| {
-        spawn_local(async move {
+        leptos::task::spawn_local(async move {
             let data = todo.js_value();
             invoke("delete_todo", data).await;
             refresh.set(Utc::now());
@@ -51,8 +49,8 @@ pub fn App() -> impl IntoView {
     };
 
     let close_modal_todo = move |x: Option<Todo>| {
-        spawn_local(async move {
-            if show_modal_mode.read() == ADD {
+        leptos::task::spawn_local(async move {
+            if show_modal_mode.read() == Mode::ADD {
                 let data = x.unwrap().js_value();
                 invoke("add_todo", data).await;
             } else {

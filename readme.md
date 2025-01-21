@@ -7,6 +7,7 @@ This is a simple POC of a [Leptos (0.7)](https://leptos.dev/) Todo Web Applicati
 ## Preparation
 
 * cargo install trunk
+* cargo install tauri-cli
 * rustup target add wasm32-unknown-unknown
 
 ## Creation
@@ -22,7 +23,7 @@ Adding the dependency to cargo.toml
 
 ```yaml
 [dependencies]
-leptos = { version = "0.7.1", features = ["csr"] }
+leptos = { version = "0.7.3", features = ["csr"] }
 ```
 
 We validate the current environment by running the default Hello World
@@ -123,7 +124,7 @@ produced artifacts are in the folder /dist and could deployed to a server, on Gi
 First step, we add some dependencies to the cargo file:
 ```yaml
 [dependencies]
-  leptos = { version = "0.7.1", features = ["csr"] }
+  leptos = { version = "0.7.3", features = ["csr"] }
   uuid = { version = "1.11.0", features = ["v4", "js"] }
   instant = { version = "0.1.13", features = [ "wasm-bindgen", "inaccurate" ] }
 ```
@@ -435,6 +436,17 @@ We could apply the command [cargo create-tauri-app] on a new application or [car
 cargo tauri init
 ```
 
+with the following configuration:
+
+```text
+? What is your app name? › Tauri Todo App
+? What should the window title be? › Tauri Todo App
+? Where are your web assets (HTML/CSS/JS) located, relative to the "<current dir>/src-tauri/tauri.conf.json" file that will be created? › ../dist
+? What is the url of your dev server? › http://localhost:1420
+? What is your frontend dev command? · trunk serve
+? What is your frontend build command? · trunk build
+```
+
 that creates a new module in our project under the folder: src-tauri.
 
 In the main module we add to Cargo.toml
@@ -459,9 +471,7 @@ ignore = ["./src-tauri"]
 port = 1420
 open = false
 ```
-The change of port is necessary for Tauri.
-
-and delete now the tauri-app folder
+The change of port is necessary for Tauri, as we defined during the Tauri generation: "What is the url of your dev server: http://localhost:1420".
 
 Start the application with:
 
@@ -479,7 +489,7 @@ We add some dependencies to the main cargo.toml
 
 ```toml
 [dependencies]
-leptos = { version = "0.7.1", features = ["csr"] }
+leptos = { version = "0.7.3", features = ["csr"] }
 uuid = { version = "1.11.0", features = ["v4", "js"] }
 chrono = { version = "0.4.39", features = ["serde", "wasm-bindgen"] }
 wasm-bindgen = { version = "0.2.99", features = ["serde"] }
@@ -503,9 +513,17 @@ chrono = { version = "0.4.39", features = ["serde"] }
 
 As you can I switch for the timestamps to the chrono library as it had less problems for the serialization.
 
-In the main.rs file from the Frontend we add:
+In the main.rs file from the Frontend we add the #[wasm_bindgen] binders:
 
 ```rust
+mod components;
+mod entities;
+
+use crate::components::App;
+use leptos::prelude::*;
+
+use wasm_bindgen::prelude::*;
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"], js_name = invoke)]
@@ -513,6 +531,10 @@ extern "C" {
 
     #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
     async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+}
+
+fn main() {
+    mount_to_body(App)
 }
 ```
 
@@ -556,45 +578,50 @@ The TodoJsValue is a container/wrapper to sent the Todo Data to the Backend by J
 We can now modify the app.rs:
 
 ```rust
+use chrono::{DateTime, Utc};
+use crate::components::*;
+use crate::entities::*;
+use leptos::prelude::*;
+use crate::{invoke, invoke_without_args};
+use gloo_utils::format::JsValueSerdeExt;
+
 #[derive(Debug, PartialEq)]
 enum Mode {
     ADD,
     EDIT
 }
 
-async fn load_data(_trigger: DateTime<Utc>, signal: WriteSignal<Vec<Todo>>) -> Vec<Todo> {
+async fn load_data(_trigger: DateTime<Utc>) -> Vec<Todo> {
     let rtn = invoke_without_args("get_todo_list").await;
     let todos = rtn.into_serde::<Vec<Todo>>().unwrap();
-    signal.set(todos.clone());
     todos
 }
 
 #[component]
 pub fn App() -> impl IntoView {
     let show_modal: RwSignal<bool> = RwSignal::new(false);
-    let show_modal_mode: RwSignal<Mode> = RwSignal::new(ADD);
+    let show_modal_mode: RwSignal<Mode> = RwSignal::new(Mode::ADD);
     let edit_todo_item: RwSignal<Todo> = RwSignal::new(Todo::new_empty());
 
     let button_new_class = "rounded-full pl-5 pr-5 bg-blue-700 text-white rounded hover:bg-blue-800";
-    let todos: RwSignal<Vec<Todo>> = RwSignal::new(Vec::new());
 
     let refresh :RwSignal<DateTime<Utc>> = RwSignal::new(Utc::now());
-    let _fetch_todos = LocalResource::new(move || load_data(refresh.get(), todos.write_only()));
+    let fetch_todos = LocalResource::new(move || load_data(refresh.get()));
 
     let add_new_todo = move |x: Todo| {
         edit_todo_item.set(x);
-        show_modal_mode.set(ADD);
+        show_modal_mode.set(Mode::ADD);
         show_modal.set(true);
     };
 
     let edit_todo = move |todo: Todo| {
         edit_todo_item.set(todo);
-        show_modal_mode.set(EDIT);
+        show_modal_mode.set(Mode::EDIT);
         show_modal.set(true);
     };
 
     let delete_todo = move |todo: Todo| {
-        spawn_local(async move {
+        leptos::task::spawn_local(async move {
             let data = todo.js_value();
             invoke("delete_todo", data).await;
             refresh.set(Utc::now());
@@ -602,8 +629,8 @@ pub fn App() -> impl IntoView {
     };
 
     let close_modal_todo = move |x: Option<Todo>| {
-        spawn_local(async move {
-            if show_modal_mode.read() == ADD {
+        leptos::task::spawn_local(async move {
+            if show_modal_mode.read() == Mode::ADD {
                 let data = x.unwrap().js_value();
                 invoke("add_todo", data).await;
             } else {
@@ -629,18 +656,29 @@ pub fn App() -> impl IntoView {
                 </button>
 
             </div>
+
+            <Suspense fallback=move || view! { <p>"Loading..."</p> }>
+
+            {move || Suspend::new(async move {
+            let todos = fetch_todos.await;
+            let todos_is_empty = todos.is_empty();
+
+            view!{
             <For
-                each=move || todos.get()
+                each=move || todos.clone()
                 key=|state| (state.id.clone(), state.title.clone(), state.description.clone())
                 let:child>
                 <TodoItem todo=child delete=delete_todo edit=edit_todo/>
             </For>
 
-            <Show when = move || todos.get().is_empty()>
+            <Show when = move || todos_is_empty>
                 <div class="flex justify-between">
                     <h2 class="text-2xl font-bold mb-4">Currently no Todos</h2>
                 </div>
             </Show>
+
+            }})}
+            </Suspense>
         </div>
 
         <Show when = move || show_modal.get()>
