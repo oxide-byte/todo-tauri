@@ -73,14 +73,12 @@ trunk serve
 
 and open in the browser the default url http://127.0.0.1:8080/
 
-Next apply some style to the page in configuring Tailwind
+Next apply some style to the page in configuring Tailwind (version 4)
 
 Add a file tailwind.css under /style
 
 ```css
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 ```
 
 Add the link on the header of the index.html

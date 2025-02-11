@@ -5,14 +5,14 @@ edition = "2024"
 license = "MIT"
 
 [dependencies]
-leptos = { version = "0.7.3", features = ["csr"] }
-uuid = { version = "1.11.0", features = ["v4", "js"] }
+leptos = { version = "0.7.5", features = ["csr"] }
+uuid = { version = "1.13.1", features = ["v4", "js"] }
 chrono = { version = "0.4.39", features = ["serde", "wasm-bindgen"] }
-wasm-bindgen = { version = "0.2.99", features = ["serde"] }
-wasm-bindgen-futures = "0.4.49"
-web-sys = "0.3.76"
-js-sys = "0.3.76"
-serde = { version = "1.0.216", features = ["derive"] }
+wasm-bindgen = { version = "0.2.100", features = ["serde"] }
+wasm-bindgen-futures = "0.4.50"
+web-sys = "0.3.77"
+js-sys = "0.3.77"
+serde = { version = "1.0.217", features = ["derive"] }
 serde-wasm-bindgen = { version = "0.6.5"}
 gloo-utils = { version = "0.2.0", features = ["serde"] }
 
