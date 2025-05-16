@@ -21,6 +21,9 @@ This part could easily replaced by an Angular, React or other Web Framework.
 
 Adding the dependency to cargo.toml
 
+The Project itself is currently on Leptos 0.8.2. The documentation of steps is based
+on a previous version:
+
 ```yaml
 [dependencies]
 leptos = { version = "0.7.3", features = ["csr"] }

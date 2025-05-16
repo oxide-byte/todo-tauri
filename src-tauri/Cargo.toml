@@ -1,16 +1,10 @@
 [package]
 name = "todo_tauri_app"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
-edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "A Todo Tauri App"
+edition = "2024"
 
 [lib]
-# The `_lib` suffix may seem redundant but it is necessary
-# to make the lib name unique and wouldn't conflict with the bin name.
-# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
 name = "todo_tauri_app"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
@@ -20,9 +14,8 @@ tauri-build = { version = "2.0.3", features = [] }
 [dependencies]
 tauri = { version = "2.1.1", features = [] }
 tauri-plugin-opener = "2.2.2"
-serde = { version = "1.0.216", features = ["derive"] }
-serde_json = { version = "1.0.133" }
-chrono = { version = "0.4.39", features = ["serde"] }
+serde = { version = "1.0.219", features = ["derive"] }
+chrono = { version = "0.4.41", features = ["serde"] }
 
 [profile.release]
 codegen-units = 1 # Allows LLVM to perform better optimization.
