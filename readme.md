@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This is a simple POC of a [Leptos (0.7)](https://leptos.dev/) Todo Web Application embedded in the [Tauri 2](https://v2.tauri.app/) Framework for Desktop and/or Mobile Applications.
+This is a simple POC of a [Leptos (0.8)](https://leptos.dev/) Todo Web Application embedded in the [Tauri 2](https://v2.tauri.app/) Framework for Desktop and/or Mobile Applications.
 
 ## Preparation
 
@@ -21,7 +21,7 @@ This part could easily replaced by an Angular, React or other Web Framework.
 
 Adding the dependency to cargo.toml
 
-The Project itself is currently on Leptos 0.8.2. The documentation of steps is based
+The Project itself is currently on Leptos 0.8.5. The documentation of steps is based
 on a previous version:
 
 ```yaml

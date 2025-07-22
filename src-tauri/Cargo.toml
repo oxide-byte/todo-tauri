@@ -9,11 +9,11 @@ name = "todo_tauri_app"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.0.3", features = [] }
+tauri-build = { version = "2.3.1", features = [] }
 
 [dependencies]
-tauri = { version = "2.1.1", features = [] }
-tauri-plugin-opener = "2.2.2"
+tauri = { version = "2.7.0", features = [] }
+tauri-plugin-opener = "2.2.6"
 serde = { version = "1.0.219", features = ["derive"] }
 chrono = { version = "0.4.41", features = ["serde"] }
 
