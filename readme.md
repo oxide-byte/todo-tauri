@@ -21,7 +21,7 @@ This part could easily replaced by an Angular, React or other Web Framework.
 
 Adding the dependency to cargo.toml
 
-The Project itself is currently on Leptos 0.8.5. The documentation of steps is based
+The Project itself is currently on Leptos 0.8.8. The documentation of steps is based
 on a previous version:
 
 ```yaml
