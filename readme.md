@@ -16,17 +16,17 @@ cargo new todo-tauri
 
 ## Todo Leptos
 
-We start doing a CSR (client-side rendering) Todo Lepos application in a couple of steps. 
+We start doing a CSR (client-side rendering) Todo Leptos application in a couple of steps. 
 This part could easily replaced by an Angular, React or other Web Framework.
 
-Adding the dependency to cargo.toml
+Adding the dependency to Cargo.toml
 
-The Project itself is currently on Leptos 0.8.8. The documentation of steps is based
-on a previous version:
+The project itself is currently on Leptos 0.8.14 (see `Cargo.toml`). The documentation of steps below was based
+on a previous version; here is the current dependency snippet:
 
-```yaml
+```toml
 [dependencies]
-leptos = { version = "0.7.3", features = ["csr"] }
+leptos = { version = "0.8.14", features = ["csr"] }
 ```
 
 We validate the current environment by running the default Hello World
@@ -36,7 +36,7 @@ cargo build
 cargo run
 ```
 
-Let add a simple container index.html file:
+Let's add a simple container `index.html` file:
 
 ```html
 <!DOCTYPE html>
@@ -68,13 +68,13 @@ target = "index.html"
 dist = "dist"
 ```
 
-start the service
+Start the dev server
 
 ```shell
 trunk serve
 ```
 
-and open in the browser the default url http://127.0.0.1:8080/
+and open in the browser the dev server URL http://127.0.0.1:1420/
 
 Next apply some style to the page in configuring Tailwind (version 4)
 
@@ -763,3 +763,26 @@ cargo tauri build
 ```
 
 and run for your machine the correspondent file: target/release/bundle
+
+## Error Handling
+
+In case of an error like: 
+
+```
+error: could not execute process `/Users/XXXXXXXXX/.cargo/bin/cargo-tauri tauri build` (never executed)
+
+Caused by:
+  Bad CPU type in executable (os error 86)
+```
+
+The solution for my part was:
+
+```
+cargo uninstall tauri-cli
+```
+
+and re-install: https://v2.tauri.app/reference/cli/
+
+````
+cargo install tauri-cli --version "^2.0.0" --locked
+````
