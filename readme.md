@@ -16,17 +16,17 @@ cargo new todo-tauri
 
 ## Todo Leptos
 
-We start doing a CSR (client-side rendering) Todo Lepos application in a couple of steps. 
+We start doing a CSR (client-side rendering) Todo Leptos application in a couple of steps. 
 This part could easily replaced by an Angular, React or other Web Framework.
 
-Adding the dependency to cargo.toml
+Adding the dependency to Cargo.toml
 
-The Project itself is currently on Leptos 0.8.8. The documentation of steps is based
-on a previous version:
+The project itself is currently on Leptos 0.8.14 (see `Cargo.toml`). The documentation of steps below was based
+on a previous version; here is the current dependency snippet:
 
-```yaml
+```toml
 [dependencies]
-leptos = { version = "0.7.3", features = ["csr"] }
+leptos = { version = "0.8.14", features = ["csr"] }
 ```
 
 We validate the current environment by running the default Hello World
@@ -36,7 +36,7 @@ cargo build
 cargo run
 ```
 
-Let add a simple container index.html file:
+Let's add a simple container `index.html` file:
 
 ```html
 <!DOCTYPE html>
@@ -68,13 +68,13 @@ target = "index.html"
 dist = "dist"
 ```
 
-start the service
+Start the dev server
 
 ```shell
 trunk serve
 ```
 
-and open in the browser the default url http://127.0.0.1:8080/
+and open in the browser the dev server URL http://127.0.0.1:1420/
 
 Next apply some style to the page in configuring Tailwind (version 4)
 
@@ -125,8 +125,8 @@ produced artifacts are in the folder /dist and could deployed to a server, on Gi
 First step, we add some dependencies to the cargo file:
 ```yaml
 [dependencies]
-  leptos = { version = "0.7.3", features = ["csr"] }
-  uuid = { version = "1.11.0", features = ["v4", "js"] }
+  leptos = { version = "0.8.14", features = ["csr"] }
+  uuid = { version = "1.19.0", features = ["v4", "js"] }
   instant = { version = "0.1.13", features = [ "wasm-bindgen", "inaccurate" ] }
 ```
 
@@ -490,26 +490,23 @@ We add some dependencies to the main cargo.toml
 
 ```toml
 [dependencies]
-leptos = { version = "0.7.3", features = ["csr"] }
-uuid = { version = "1.11.0", features = ["v4", "js"] }
-chrono = { version = "0.4.39", features = ["serde", "wasm-bindgen"] }
-wasm-bindgen = { version = "0.2.99", features = ["serde"] }
-wasm-bindgen-futures = "0.4.49"
-web-sys = "0.3.76"
-js-sys = "0.3.76"
-serde = { version = "1.0.216", features = ["derive"] }
-serde-wasm-bindgen = { version = "0.6.5"}
+leptos = { version = "0.8.14", features = ["csr"] }
+uuid = { version = "1.19.0", features = ["v4", "js"] }
+chrono = { version = "0.4.42", features = ["serde", "wasm-bindgen"] }
+wasm-bindgen = { version = "0.2.106", features = ["serde"] }
+wasm-bindgen-futures = "0.4.56"
+js-sys = "0.3.83"
+serde = { version = "1.0.228", features = ["derive"] }
 gloo-utils = { version = "0.2.0", features = ["serde"] }
 ```
 
 and to the cargo.toml in src-tauri:
 ```toml
 [dependencies]
-tauri = { version = "2.1.1", features = [] }
-tauri-plugin-opener = "2.2.2"
-serde = { version = "1.0.216", features = ["derive"] }
-serde_json = { version = "1.0.133" }
-chrono = { version = "0.4.39", features = ["serde"] }
+tauri = { version = "2.9.5", features = [] }
+tauri-plugin-opener = "2.5.2"
+serde = { version = "1.0.228", features = ["derive"] }
+chrono = { version = "0.4.42", features = ["serde"] }
 ```
 
 As you can I switch for the timestamps to the chrono library as it had less problems for the serialization.
@@ -763,3 +760,26 @@ cargo tauri build
 ```
 
 and run for your machine the correspondent file: target/release/bundle
+
+## Error Handling
+
+In case of an error like: 
+
+```
+error: could not execute process `/Users/XXXXXXXXX/.cargo/bin/cargo-tauri tauri build` (never executed)
+
+Caused by:
+  Bad CPU type in executable (os error 86)
+```
+
+The solution for my part was:
+
+```
+cargo uninstall tauri-cli
+```
+
+and re-install: https://v2.tauri.app/reference/cli/
+
+````
+cargo install tauri-cli --version "^2.0.0" --locked
+````
